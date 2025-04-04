@@ -5,7 +5,7 @@ from sqlalchemy import create_engine
 from langchain_community.utilities import SQLDatabase
 from datetime import datetime
 
-DATABASE_URL = "postgresql://postgres:12345@localhost:5432/Technographics_Dataset"
+DATABASE_URL = "postgresql://technographics_dataset_user:6ygabdgGyylCn0v8WNXn42kBQLQptFHm@dpg-cvnmb0je5dus738lc100-a/technographics_dataset"
 engine = create_engine(DATABASE_URL)
 db = SQLDatabase.from_uri(DATABASE_URL)
 
