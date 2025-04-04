@@ -15,7 +15,7 @@ import prompts as p
 from sql import sql_tool
 
 # Database connection
-DATABASE_URL = "postgresql://postgres:12345@localhost:5432/Technographics_Dataset"
+DATABASE_URL = "postgresql://technographics_dataset_user:6ygabdgGyylCn0v8WNXn42kBQLQptFHm@dpg-cvnmb0je5dus738lc100-a/technographics_dataset"
 engine = create_engine(DATABASE_URL)
 
 # LLM setup
