@@ -85,7 +85,7 @@ def get_examples():
         },
         {
             "input": "give me details of the company accelant",
-            "query": """ELECT c.company_id, c.name, c.description, c.company_size, c.state, c.country, c.city, c.zip_code, c.address, c.url
+            "query": """SELECT c.company_id, c.name, c.description, c.company_size, c.state, c.country, c.city, c.zip_code, c.address, c.url
                         FROM companies  C
                         WHERE c.name ILIKE 'accelant';"""
         },
@@ -95,14 +95,21 @@ def get_examples():
 FROM companies 
 WHERE name = 'name'"""
         },
-
         {
-            "input": "Show all tools used by companies created before April 2, 2025.",
+            "input": "What are the various sales software used by companies?",
             "query": """SELECT DISTINCT t.name 
                         FROM tools t 
                         JOIN company_tools ct ON t.tool_id = ct.tool_id 
-                        JOIN company c ON ct.company_id = c.company_id 
-                        WHERE c.created_at < '2025-04-02';"""
+                        WHERE t.type = 'Sales Software' 
+                        ORDER BY t.name 
+                        LIMIT 100;"""
+        },
+        {
+            "input": "What are the various types of tools being used in the market currently?",
+            "query": """SELECT DISTINCT t.type 
+                        FROM tools t 
+                        ORDER BY t.type 
+                        LIMIT 100;"""
         }
     ]
 
@@ -116,6 +123,7 @@ def get_few_shot_queries_prompt():
     - 'tools': tool_id (UUID), name (STRING), type (STRING), created_at (TIMESTAMP)
     - 'company_tools': company_id (UUID), tool_id (UUID), source (STRING), last_updated (TIMESTAMP)
 
+    The 'tools.type' column contains specific categories such as 'Programming Language', 'Framework', 'Database', 'Cloud Service', 'DevOps Tool', 'CI/CD Tool', 'CRM', 'Sales Software', 'Accounting Software', 'Marketing Tool', 'Sales Outreach Tool', 'ERP System', or 'Other Software'. Use these categories to filter tools as needed.
     there are no tool and company names inside the company_tools table, only the company_id and tool_id are present. The company name and tool name are redundant but stored for convenience.
 
     Use JOINs to connect tables as needed. For case-insensitive text matching, use ILIKE with wildcards (e.g., '%Microsoft%'). Double-check your query for correctness before execution. If an error occurs, rewrite and retry. Only use SELECT statements—do not make DML statements (INSERT, UPDATE, DELETE, DROP, etc.).

@@ -15,7 +15,7 @@ import prompts as p
 from sql import sql_tool
 
 # Database connection
-DATABASE_URL = "postgresql://technographics_dataset_user:6ygabdgGyylCn0v8WNXn42kBQLQptFHm@dpg-cvnmb0je5dus738lc100-a/technographics_dataset"
+DATABASE_URL = "postgresql://technographics_dataset_user:6ygabdgGyylCn0v8WNXn42kBQLQptFHm@dpg-cvnmb0je5dus738lc100-a.oregon-postgres.render.com/technographics_dataset"
 engine = create_engine(DATABASE_URL)
 
 # LLM setup
@@ -47,13 +47,34 @@ prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-# Custom history handler for PostgreSQL
+# In agent.py
 class PostgresChatHistory:
     def __init__(self, session_id):
         self.session_id = session_id
+        self._ensure_session_exists()  # New method to initialize session
+
+    def _ensure_session_exists(self):
+        """Ensure the session exists in session_details with a default title if new."""
+        with engine.connect() as conn:
+            # Check if session exists
+            result = conn.execute(
+                text("SELECT title FROM session_details WHERE session_id = :session_id"),
+                {"session_id": self.session_id}
+            ).fetchone()
+            if not result:
+                # Insert with a temporary title if no messages exist yet
+                conn.execute(
+                    text("""
+                        INSERT INTO session_details (session_id, title)
+                        VALUES (:session_id, :title)
+                        ON CONFLICT (session_id) DO NOTHING
+                    """),
+                    {"session_id": self.session_id, "title": "New Session"}
+                )
+                conn.commit()
 
     def get_history(self):
-        # Create a ChatMessageHistory object to hold the messages
+        # ... (unchanged)
         chat_history = ChatMessageHistory()
         with engine.connect() as conn:
             result = conn.execute(
@@ -75,6 +96,7 @@ class PostgresChatHistory:
 
     def add_message(self, message_type, content):
         with engine.connect() as conn:
+            # Insert the message into chat_history
             conn.execute(
                 text("""
                     INSERT INTO chat_history (session_id, message_type, message_content)
@@ -82,8 +104,25 @@ class PostgresChatHistory:
                 """),
                 {"session_id": self.session_id, "message_type": message_type, "message_content": content}
             )
+            # If this is the first human message, update the title in session_details
+            if message_type == "human":
+                first_message = conn.execute(
+                    text("""
+                        SELECT COUNT(*) FROM chat_history 
+                        WHERE session_id = :session_id AND message_type = 'human'
+                    """),
+                    {"session_id": self.session_id}
+                ).scalar()
+                if first_message == 1:  # This is the first human message
+                    conn.execute(
+                        text("""
+                            UPDATE session_details 
+                            SET title = :title 
+                            WHERE session_id = :session_id
+                        """),
+                        {"session_id": self.session_id, "title": content}
+                    )
             conn.commit()
-
 # Agent setup
 react_agent = create_openai_tools_agent(llm=llm, prompt=prompt, tools=tools)
 agent_executor = AgentExecutor(

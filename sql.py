@@ -5,7 +5,7 @@ from sqlalchemy import create_engine
 from langchain_community.utilities import SQLDatabase
 from datetime import datetime
 
-DATABASE_URL = "postgresql://technographics_dataset_user:6ygabdgGyylCn0v8WNXn42kBQLQptFHm@dpg-cvnmb0je5dus738lc100-a/technographics_dataset"
+DATABASE_URL = "postgresql://technographics_dataset_user:6ygabdgGyylCn0v8WNXn42kBQLQptFHm@dpg-cvnmb0je5dus738lc100-a.oregon-postgres.render.com/technographics_dataset"
 engine = create_engine(DATABASE_URL)
 db = SQLDatabase.from_uri(DATABASE_URL)
 
@@ -48,7 +48,7 @@ def replace_null_values(columns: list, result: list) -> str:
     """
     default_values = {
         "name": "Unknown Name",
-        "type": "Software",
+        "type": "Other Software",  # Updated default to reflect new fallback category
         "company_name": "Unknown Company",
         "tool_name": "Unknown Tool",
         "source": "Unknown Source",
@@ -82,11 +82,19 @@ def replace_wildcard(query: str) -> str:
     Returns:
         str: The modified SQL query with the wildcard replaced.
     """
+    query_upper = query.upper()
     for table, columns in tables_columns.items():
-        if f"FROM {table}" in query.upper():
-            if "SELECT *" in query.upper():
-                column_list = ", ".join(columns)
-                query = re.sub(r"SELECT\s*\*\s*FROM", f"SELECT {column_list} FROM", query, flags=re.IGNORECASE)
+        if f"FROM {table.upper()}" in query_upper:
+            if "SELECT *" in query_upper:
+                column_list = ", ".join([f"{table}.{col}" for col in columns])
+                # Replace SELECT * with specific columns, preserving original case in the query
+                query = re.sub(
+                    r"SELECT\s*\*\s*FROM",
+                    f"SELECT {column_list} FROM",
+                    query,
+                    flags=re.IGNORECASE
+                )
+                print(f"Replaced wildcard with: {column_list}")  # Debug print
                 break
     return query
 
